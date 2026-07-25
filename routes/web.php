@@ -17,7 +17,7 @@ use App\Http\Controllers\AdminController;
 */
 
 // ============================================================
-// PUBLIC PAGES
+// PUBLIC PAGES (dapat diakses semua orang)
 // ============================================================
 
 // Home – menampilkan produk unggulan & daftar produk
@@ -37,7 +37,6 @@ Route::get('/', function () {
         $products = collect();
     }
 
-    // Ambil produk pertama sebagai unggulan (featured)
     $product = $products->first() ?: (object) [
         'id'       => 0,
         'name'     => 'Featured Product',
@@ -49,11 +48,14 @@ Route::get('/', function () {
     return view('home', compact('products', 'product'));
 })->name('home');
 
-// About
+// About – halaman informasi brand
 Route::view('/about', 'about')->name('about');
 
+// Store – halaman alamat toko fisik (TAMBAHKAN)
+Route::view('/store', 'store')->name('store');
+
 // ============================================================
-// PRODUCT ROUTES
+// PRODUCT ROUTES (public)
 // ============================================================
 Route::controller(ProductController::class)->group(function () {
     Route::get('/products', 'index')->name('products.index');
@@ -61,23 +63,23 @@ Route::controller(ProductController::class)->group(function () {
 });
 
 // ============================================================
-// ACCOUNT (bisa diakses guest)
+// ACCOUNT – bisa diakses guest (akan muncul banner login)
 // ============================================================
 Route::get('/account', [AccountController::class, 'index'])->name('account');
 
 // ============================================================
-// DASHBOARD (auth & verified)
+// DASHBOARD – hanya untuk user login & terverifikasi
 // ============================================================
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // ============================================================
-// AUTHENTICATED ROUTES
+// AUTHENTICATED ROUTES (hanya untuk user yang sudah login)
 // ============================================================
 Route::middleware('auth')->group(function () {
 
-    // ---- Profile ----
+    // ---- Profile (edit profil, ganti password, hapus akun) ----
     Route::controller(ProfileController::class)->group(function () {
         Route::get('/profile', 'edit')->name('profile.edit');
         Route::patch('/profile', 'update')->name('profile.update');
@@ -85,7 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/password', 'updatePassword')->name('password.update');
     });
 
-    // ---- Cart ----
+    // ---- Cart (keranjang belanja) ----
     Route::controller(CartController::class)->group(function () {
         Route::get('/cart', 'index')->name('cart.index');
         Route::post('/cart/add', 'add')->name('cart.add');
@@ -93,21 +95,21 @@ Route::middleware('auth')->group(function () {
         Route::delete('/cart/{key}', 'remove')->name('cart.remove');
     });
 
-    // ---- Checkout ----
+    // ---- Checkout & Orders ----
     Route::controller(OrderController::class)->group(function () {
         Route::get('/checkout', 'checkout')->name('checkout');
         Route::post('/checkout', 'store')->name('checkout.store');
         Route::get('/orders/{order}', 'show')->name('orders.show');
     });
 
-    // ---- Payment ----
+    // ---- Payment (Midtrans) ----
     Route::controller(PaymentController::class)->group(function () {
         Route::get('/orders/{order}/snap-token', 'getSnapToken')->name('payment.snap-token');
         Route::get('/orders/{order}/simulate-success', 'simulateSuccess')->name('payment.simulate-success');
     });
 
-    // ---- Admin Panel ----
-    Route::controller(AdminController::class)->group(function () {
+    // ---- Admin Panel (hanya admin) ----
+    Route::middleware('admin')->controller(AdminController::class)->group(function () {
         Route::get('/admin', 'index')->name('admin.dashboard');
         Route::post('/admin/products', 'storeProduct')->name('admin.products.store');
         Route::delete('/admin/products/{id}', 'deleteProduct')->name('admin.products.destroy');
@@ -117,6 +119,6 @@ Route::middleware('auth')->group(function () {
 });
 
 // ============================================================
-// AUTH ROUTES (Laravel Breeze / Jetstream)
+// AUTH ROUTES (Laravel Breeze / Jetstream) – jangan diubah
 // ============================================================
 require __DIR__ . '/auth.php';

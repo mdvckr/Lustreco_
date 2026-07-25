@@ -9,7 +9,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Menambahkan data contoh produk
         Product::create([
             'name' => 'Sepatu Sneakers Lustreco',
             'description' => 'Sepatu kasual elegan dan nyaman digunakan untuk aktivitas sehari-hari.',
