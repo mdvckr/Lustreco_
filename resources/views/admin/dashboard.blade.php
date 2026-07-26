@@ -21,6 +21,50 @@
             </div>
         </div>
 
+        {{-- Statistics Cards --}}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+            <div class="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between text-zinc-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Total Sales</span>
+                    <i class="fa-solid fa-wallet text-base text-zinc-800"></i>
+                </div>
+                <div class="text-xl md:text-2xl font-black text-zinc-950">
+                    Rp {{ number_format($stats['total_sales'], 0, ',', '.') }}
+                </div>
+                <div class="text-[10px] text-zinc-400 mt-1">From successful payments</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between text-zinc-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Total Orders</span>
+                    <i class="fa-solid fa-cart-shopping text-base text-zinc-800"></i>
+                </div>
+                <div class="text-xl md:text-2xl font-black text-zinc-950">
+                    {{ $stats['total_orders'] }}
+                </div>
+                <div class="text-[10px] text-zinc-400 mt-1">{{ $stats['pending_orders'] }} pending / {{ $stats['processing_orders'] }} processing</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between text-zinc-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Total Products</span>
+                    <i class="fa-solid fa-box-open text-base text-zinc-800"></i>
+                </div>
+                <div class="text-xl md:text-2xl font-black text-zinc-950">
+                    {{ $stats['total_products'] }}
+                </div>
+                <div class="text-[10px] text-zinc-400 mt-1">Live in store catalog</div>
+            </div>
+            <div class="bg-white rounded-2xl border border-zinc-100 p-5 shadow-sm">
+                <div class="flex items-center justify-between text-zinc-400 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Active Customers</span>
+                    <i class="fa-solid fa-users text-base text-zinc-800"></i>
+                </div>
+                <div class="text-xl md:text-2xl font-black text-zinc-950">
+                    {{ $stats['total_users'] }}
+                </div>
+                <div class="text-[10px] text-zinc-400 mt-1">Registered accounts</div>
+            </div>
+        </div>
+
         {{-- Toast Notifikasi --}}
         @if(session('success'))
             <div class="mb-6 bg-zinc-900 text-white text-sm font-medium px-6 py-4 rounded-2xl shadow-lg border border-zinc-800 flex items-center gap-2 animate-pulse">
@@ -100,6 +144,106 @@
                             <i class="fa-solid fa-shirt text-5xl text-zinc-300 mb-4 block"></i>
                             <h3 class="font-bold text-zinc-700">No Custom Products</h3>
                             <p class="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">Create your first custom product by clicking the button above.</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Orders Management --}}
+                <div class="bg-white rounded-3xl border border-zinc-100 shadow-sm p-6 md:p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-zinc-900">Orders Management</h2>
+                            <p class="text-xs text-zinc-500 mt-0.5">View and update user transaction states.</p>
+                        </div>
+                        <span class="bg-zinc-100 text-zinc-800 text-xs font-bold px-3 py-1.5 rounded-full">
+                            {{ $orders->count() }} Total
+                        </span>
+                    </div>
+
+                    @if($orders->count() > 0)
+                        <div class="space-y-6">
+                            @foreach($orders as $order)
+                                <div class="bg-zinc-50/50 rounded-2xl border border-zinc-100 p-5 space-y-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-2 border-b border-zinc-100/80 pb-3">
+                                        <div>
+                                            <span class="text-xs font-semibold text-zinc-400">Order #{{ $order->id }}</span>
+                                            <h4 class="text-sm font-bold text-zinc-850 mt-0.5">{{ $order->recipient_name }} ({{ $order->email }})</h4>
+                                            <p class="text-[10px] text-zinc-400 mt-0.5">{{ $order->created_at->format('d M Y, H:i') }}</p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            {{-- Status Badges --}}
+                                            <span class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full tracking-wider
+                                                @if($order->status === 'completed') bg-emerald-50 text-emerald-600
+                                                @elseif($order->status === 'processing') bg-blue-50 text-blue-600
+                                                @elseif($order->status === 'cancelled') bg-red-50 text-red-600
+                                                @else bg-zinc-100 text-zinc-600 @endif">
+                                                Status: {{ $order->status }}
+                                            </span>
+                                            <span class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full tracking-wider
+                                                @if($order->payment_status === 'success') bg-emerald-50 text-emerald-600
+                                                @elseif($order->payment_status === 'failed') bg-red-50 text-red-600
+                                                @else bg-amber-50 text-amber-600 @endif">
+                                                Payment: {{ $order->payment_status }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {{-- Items --}}
+                                        <div class="space-y-2">
+                                            <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Ordered Items</p>
+                                            <div class="max-h-[120px] overflow-y-auto space-y-1.5 pr-1">
+                                                @foreach($order->items as $item)
+                                                    <div class="flex justify-between items-center text-xs">
+                                                        <span class="text-zinc-600 truncate max-w-[180px]">{{ $item->product_name }}</span>
+                                                        <span class="font-medium text-zinc-800 shrink-0">x{{ $item->quantity }} - Rp {{ number_format($item->price, 0, ',', '.') }}</span>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            <div class="border-t border-zinc-100 pt-2 flex justify-between text-xs font-bold text-zinc-900">
+                                                <span>Total Amount</span>
+                                                <span>Rp {{ number_format($order->total, 0, ',', '.') }}</span>
+                                            </div>
+                                        </div>
+
+                                        {{-- Control Form --}}
+                                        <div class="bg-white border border-zinc-100 rounded-xl p-3.5 space-y-3 flex flex-col justify-between">
+                                            <p class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Update Status</p>
+                                            <form action="{{ route('admin.orders.update-status', $order->id) }}" method="POST" class="space-y-3">
+                                                @csrf
+                                                @method('PATCH')
+                                                <div class="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label class="text-[9px] font-bold text-zinc-400 uppercase block mb-1">Order State</label>
+                                                        <select name="status" class="w-full bg-zinc-50 border border-zinc-200 text-xs rounded-lg p-1.5 outline-none font-medium text-zinc-800">
+                                                            <option value="pending" @selected($order->status === 'pending')>Pending</option>
+                                                            <option value="processing" @selected($order->status === 'processing')>Processing</option>
+                                                            <option value="completed" @selected($order->status === 'completed')>Completed</option>
+                                                            <option value="cancelled" @selected($order->status === 'cancelled')>Cancelled</option>
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[9px] font-bold text-zinc-400 uppercase block mb-1">Payment</label>
+                                                        <select name="payment_status" class="w-full bg-zinc-50 border border-zinc-200 text-xs rounded-lg p-1.5 outline-none font-medium text-zinc-800">
+                                                            <option value="pending" @selected($order->payment_status === 'pending')>Pending</option>
+                                                            <option value="success" @selected($order->payment_status === 'success')>Success</option>
+                                                            <option value="failed" @selected($order->payment_status === 'failed')>Failed</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <button type="submit" class="w-full bg-zinc-950 text-white hover:bg-zinc-800 text-[10px] font-bold py-2 rounded-lg transition duration-150">
+                                                    Apply Updates
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center py-12 border border-dashed border-zinc-200 rounded-2xl">
+                            <i class="fa-solid fa-receipt text-4xl text-zinc-300 mb-2.5 block"></i>
+                            <p class="text-xs text-zinc-400">No orders received yet.</p>
                         </div>
                     @endif
                 </div>

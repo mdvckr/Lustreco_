@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -27,6 +29,18 @@ class AdminController extends Controller
         $this->checkAdmin();
 
         $products = Product::orderBy('created_at', 'desc')->get();
+        $orders = Order::with('items', 'user')->orderBy('created_at', 'desc')->get();
+
+        // Hitung Statistik
+        $stats = [
+            'total_sales' => (int) Order::where('payment_status', 'success')->sum('total'),
+            'total_orders' => Order::count(),
+            'total_products' => Product::count(),
+            'total_users' => User::count(),
+            'pending_orders' => Order::where('status', 'pending')->count(),
+            'processing_orders' => Order::where('status', 'processing')->count(),
+            'completed_orders' => Order::where('status', 'completed')->count(),
+        ];
 
         // Ambil daftar file gambar yang telah diunggah di public/uploads/
         $images = [];
@@ -52,7 +66,7 @@ class AdminController extends Controller
             return filemtime($uploadsPath . '/' . $b['name']) - filemtime($uploadsPath . '/' . $a['name']);
         });
 
-        return view('admin.dashboard', compact('products', 'images'));
+        return view('admin.dashboard', compact('products', 'images', 'orders', 'stats'));
     }
 
     /**
@@ -182,6 +196,31 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'File tidak ditemukan di server.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menghapus gambar: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update status pesanan user.
+     */
+    public function updateOrderStatus(Request $request, $id)
+    {
+        $this->checkAdmin();
+
+        $request->validate([
+            'status' => 'required|string|in:pending,processing,completed,cancelled',
+            'payment_status' => 'required|string|in:pending,success,failed',
+        ]);
+
+        try {
+            $order = Order::findOrFail($id);
+            $order->update([
+                'status' => $request->input('status'),
+                'payment_status' => $request->input('payment_status'),
+            ]);
+
+            return redirect()->back()->with('success', 'Status pesanan #' . $id . ' berhasil diperbarui!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal memperbarui status pesanan: ' . $e->getMessage());
         }
     }
 }

@@ -12,12 +12,12 @@ class ProductController extends Controller
     {
         // Ambil parameter filter
         $search = $request->query('search');
-        $category = $request->query('category'); // 'all', 't-shirt', 'hoodie', 'celana'
+        $category = $request->query('category'); // 'all', 't-shirt', 'hoodie', 'pants'
         $type = $request->query('type');
         $availability = $request->query('availability');
 
         // Ambil data dari database (produk buatan admin)
-        $localProducts = Product::orderBy('created_at', 'desc')->get()->map(function ($item) {
+        $products = Product::orderBy('created_at', 'desc')->get()->map(function ($item) {
             $product = new \stdClass();
             $product->id = 'db-' . $item->id;
             $product->name = $item->name;
@@ -25,78 +25,58 @@ class ProductController extends Controller
             $product->image = $item->image;
             $product->category = 'local';
             $product->description = $item->description;
+            $product->stock = $item->stock;
             return $product;
         });
 
-        // Ambil data dari API
-        $response = Http::withoutVerifying()->get("https://fakestoreapi.com/products");
-        $products = collect();
+        // --- FILTER BERDASARKAN KATEGORI STATIS (T-Shirt, Hoodie, Celana) ---
+        if ($category && $category !== 'all') {
+            $keywordMap = [
+                't-shirt' => ['shirt', 'tee', 't-shirt', 'kaos'],
+                'hoodie'  => ['hoodie', 'sweatshirt', 'hooded', 'jaket'],
+                'pants'   => ['pants', 'jeans', 'trouser', 'jogger', 'celana'],
+            ];
 
-        if ($response->successful()) {
-            $apiProducts = $response->json();
-            foreach ($apiProducts as $apiProduct) {
-                $product = new \stdClass();
-                $product->id = $apiProduct['id'];
-                $product->name = $apiProduct['title'];
-                $product->price = $apiProduct['price'] * 15000;
-                $product->image = $apiProduct['image'];
-                $product->category = $apiProduct['category'];
-                $product->description = $apiProduct['description'] ?? '';
-                $products->push($product);
+            $keywords = $keywordMap[$category] ?? [];
+            if (!empty($keywords)) {
+                $products = $products->filter(function ($product) use ($keywords) {
+                    $name = strtolower($product->name);
+                    foreach ($keywords as $keyword) {
+                        if (strpos($name, $keyword) !== false) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
             }
-        } else {
-            $products = $this->getDummyProducts();
         }
 
-        // Gabungkan produk lokal di urutan paling depan
-        $products = $localProducts->merge($products);
-
-    // --- FILTER BERDASARKAN KATEGORI STATIS (T-Shirt, Hoodie, Celana) ---
-    if ($category && $category !== 'all') {
-        $keywordMap = [
-            't-shirt' => ['shirt', 'tee', 't-shirt'],
-            'hoodie'  => ['hoodie', 'sweatshirt', 'hooded'],
-            'pants'  => ['pants', 'jeans', 'trouser', 'jogger'],
-        ];
-
-        $keywords = $keywordMap[$category] ?? [];
-        if (!empty($keywords)) {
-            $products = $products->filter(function ($product) use ($keywords) {
-                $name = strtolower($product->name);
-                foreach ($keywords as $keyword) {
-                    if (strpos($name, $keyword) !== false) {
-                        return true;
-                    }
-                }
-                return false;
+        // Filter search
+        if ($search) {
+            $products = $products->filter(function ($product) use ($search) {
+                return stripos($product->name, $search) !== false ||
+                       stripos($product->description, $search) !== false;
             });
         }
-    }
 
-    // Filter lainnya (search, type, availability) tetap sama seperti sebelumnya
-    if ($search) {
-        $products = $products->filter(function ($product) use ($search) {
-            return stripos($product->name, $search) !== false ||
-                   stripos($product->description, $search) !== false;
-        });
-    }
+        // Filter type (diskon / di bawah 100k)
+        if ($type === 'discount') {
+            $products = $products->filter(function ($product) {
+                return $product->price < 100000;
+            });
+        }
 
-    if ($type === 'discount') {
-        $products = $products->filter(function ($product) {
-            return $product->price < 100000;
-        });
-    }
+        // Filter ketersediaan (stok > 0)
+        if ($availability === 'in_stock') {
+            $products = $products->filter(function ($product) {
+                return $product->stock > 0;
+            });
+        }
 
-    if ($availability === 'in_stock') {
-        $products = $products->filter(function ($product) {
-            return $product->id % 2 == 0;
-        });
-    }
+        // Daftar kategori statis untuk ditampilkan di sidebar
+        $categories = collect(['t-shirt', 'hoodie', 'pants']);
 
-    // Daftar kategori statis untuk ditampilkan di sidebar
-    $categories = collect(['t-shirt', 'hoodie', 'pants']);
-
-    return view('products.index', compact('products', 'categories', 'search', 'category', 'type', 'availability'));
+        return view('products.index', compact('products', 'categories', 'search', 'category', 'type', 'availability'));
     }
 
     public function show($id)
@@ -112,25 +92,11 @@ class ProductController extends Controller
             $product->image = $dbProduct->image;
             $product->description = $dbProduct->description;
             $product->category = 'local';
+            $product->stock = $dbProduct->stock;
 
             return view('products.show', compact('product'));
         }
 
-        $response = Http::withoutVerifying()->get("https://fakestoreapi.com/products/" . $id);
-        
-        if ($response->successful()) {
-            $apiProduct = $response->json();
-            $product = new \stdClass();
-            $product->id = $apiProduct['id'];
-            $product->name = $apiProduct['title'];
-            $product->price = $apiProduct['price'] * 15000;
-            $product->image = $apiProduct['image'];
-            $product->description = $apiProduct['description'];
-            $product->category = $apiProduct['category'];
-            
-            return view('products.show', compact('product'));
-        }
-        
         abort(404);
     }
 }

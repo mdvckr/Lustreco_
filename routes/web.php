@@ -9,6 +9,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Auth\SocialAuthController;
+use App\Models\Product;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,20 +24,7 @@ use App\Http\Controllers\AdminController;
 
 // Home – menampilkan produk unggulan & daftar produk
 Route::get('/', function () {
-    try {
-        $response = Http::withoutVerifying()->get('https://fakestoreapi.com/products?limit=4');
-        $products = $response->successful()
-            ? collect($response->json())->map(fn($item) => (object) [
-                'id'       => $item['id'],
-                'name'     => $item['title'],
-                'price'    => (int) round($item['price'] * 15000),
-                'image'    => $item['image'],
-                'category' => $item['category'],
-            ])
-            : collect();
-    } catch (\Exception $e) {
-        $products = collect();
-    }
+    $products = Product::latest()->take(4)->get();
 
     $product = $products->first() ?: (object) [
         'id'       => 0,
@@ -43,6 +32,7 @@ Route::get('/', function () {
         'price'    => 0,
         'image'    => 'https://via.placeholder.com/500x500?text=No+Image',
         'category' => 'uncategorized',
+        'description' => '',
     ];
 
     return view('home', compact('products', 'product'));
@@ -115,7 +105,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin/products/{id}', 'deleteProduct')->name('admin.products.destroy');
         Route::post('/admin/upload', 'uploadImage')->name('admin.upload');
         Route::post('/admin/upload/delete', 'deleteImage')->name('admin.upload.destroy');
+        Route::patch('/admin/orders/{id}/status', 'updateOrderStatus')->name('admin.orders.update-status');
     });
+});
+
+// ============================================================
+// SOCIAL AUTH ROUTES (Google & Apple)
+// ============================================================
+Route::middleware('guest')->group(function () {
+    Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])->name('auth.social.redirect');
+    Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])->name('auth.social.callback');
+    Route::get('/auth/simulator/{provider}', [SocialAuthController::class, 'showSimulator'])->name('auth.simulator.show');
+    Route::post('/auth/simulator/{provider}', [SocialAuthController::class, 'handleSimulator'])->name('auth.simulator.handle');
 });
 
 // ============================================================

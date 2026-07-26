@@ -126,12 +126,12 @@
             </div>
 
             <div class="grid grid-cols-2 gap-3">
-                <button class="flex items-center justify-center gap-2 border border-gray-200/70 rounded-xl py-3 hover:bg-white/50 transition text-sm font-medium text-gray-700 bg-white/30">
+                <a href="{{ route('auth.social.redirect', 'google') }}" class="flex items-center justify-center gap-2 border border-gray-200/70 rounded-xl py-3 hover:bg-white/50 transition text-sm font-medium text-gray-700 bg-white/30">
                     <i class="fa-brands fa-google text-red-500"></i> Google
-                </button>
-                <button class="flex items-center justify-center gap-2 border border-gray-200/70 rounded-xl py-3 hover:bg-white/50 transition text-sm font-medium text-gray-700 bg-white/30">
+                </a>
+                <a href="{{ route('auth.social.redirect', 'apple') }}" class="flex items-center justify-center gap-2 border border-gray-200/70 rounded-xl py-3 hover:bg-white/50 transition text-sm font-medium text-gray-700 bg-white/30">
                     <i class="fa-brands fa-apple text-black"></i> Apple
-                </button>
+                </a>
             </div>
         </div>
     </main>
